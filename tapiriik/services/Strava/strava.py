@@ -29,6 +29,7 @@ class StravaService(ServiceBase):
     UserActivityURL = "http://app.strava.com/activities/{1}"
     AuthenticationNoFrame = True  # They don't prevent the iframe, it just looks really ugly.
     PartialSyncRequiresTrigger = True
+    PartialSyncTriggerStatusCode = 200
     PartialSyncTriggerRequiresSubscription = True
     LastUpload = None
 
@@ -88,6 +89,7 @@ class StravaService(ServiceBase):
     SupportedActivities = list(_activityTypeMappings.keys())
 
     GlobalRateLimits = STRAVA_RATE_LIMITS
+    GlobalRateLimitsPreemptiveSleep = True
 
     def UserUploadedActivityURL(self, uploadId):
         return "https://www.strava.com/activities/%d" % uploadId
@@ -103,6 +105,8 @@ class StravaService(ServiceBase):
            "https://www.strava.com/oauth/authorize?" + urlencode(params)
 
     def _requestWithAuth(self, reqLambda, serviceRecord):
+        self._globalRateLimit()
+
         session = requests.Session()
 
         if time.time() > serviceRecord.Authorization.get("AccessTokenExpiresAt", 0) - 60:
